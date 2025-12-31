@@ -1,0 +1,94 @@
+Create Database
+CREATE DATABASE telecom_optimization;
+USE telecom_optimization;
+
+Create Call Detail Record (CDR) Table
+CREATE TABLE cdr (
+    call_id INT AUTO_INCREMENT PRIMARY KEY,
+    caller_number VARCHAR(15),
+    receiver_number VARCHAR(15),
+    cell_id VARCHAR(10),
+    call_duration INT,          -- in seconds
+    call_status VARCHAR(10),    -- SUCCESS / DROPPED
+    call_time DATETIME
+);
+
+Insert Sample Telecom Data
+INSERT INTO cdr (caller_number, receiver_number, cell_id, call_duration, call_status, call_time)
+VALUES
+('9876543210','9123456780','CELL01',120,'SUCCESS','2025-01-01 10:15:00'),
+('9876543211','9123456781','CELL01',0,'DROPPED','2025-01-01 10:20:00'),
+('9876543212','9123456782','CELL02',300,'SUCCESS','2025-01-01 18:30:00'),
+('9876543213','9123456783','CELL02',0,'DROPPED','2025-01-01 18:45:00'),
+('9876543214','9123456784','CELL03',240,'SUCCESS','2025-01-01 20:10:00'),
+('9876543215','9123456785','CELL03',180,'SUCCESS','2025-01-01 20:30:00');
+
+Dropped Call Analysis (Problematic Cells)
+SELECT cell_id,
+       COUNT(*) AS dropped_calls
+FROM cdr
+WHERE call_status = 'DROPPED'
+GROUP BY cell_id
+ORDER BY dropped_calls DESC;
+
+
+Used to identify weak network cells
+
+Call Success Rate (CSR)
+SELECT cell_id,
+       COUNT(CASE WHEN call_status = 'SUCCESS' THEN 1 END) * 100.0 /
+       COUNT(*) AS call_success_rate
+FROM cdr
+GROUP BY cell_id;
+
+
+Low CSR → poor signal or congestion
+
+Call Drop Rate (CDR)
+SELECT cell_id,
+       COUNT(CASE WHEN call_status = 'DROPPED' THEN 1 END) * 100.0 /
+       COUNT(*) AS call_drop_rate
+FROM cdr
+GROUP BY cell_id;
+
+
+Key KPI for telecom optimization
+
+Traffic Load per Cell
+SELECT cell_id,
+       SUM(call_duration) AS total_traffic_seconds
+FROM cdr
+GROUP BY cell_id
+ORDER BY total_traffic_seconds DESC;
+
+
+Used for capacity planning
+
+Peak Hour Traffic Analysis
+SELECT HOUR(call_time) AS hour,
+       COUNT(*) AS total_calls
+FROM cdr
+GROUP BY HOUR(call_time)
+ORDER BY total_calls DESC;
+
+
+Identifies busy hours
+
+Congestion Detection
+SELECT cell_id,
+       COUNT(*) AS active_calls
+FROM cdr
+WHERE call_time BETWEEN '2025-01-01 18:00:00' AND '2025-01-01 21:00:00'
+GROUP BY cell_id
+HAVING COUNT(*) > 2;
+
+
+Cells exceeding threshold → congestion
+
+Identify Worst Performing Cells
+SELECT cell_id,
+       COUNT(*) AS total_calls,
+       SUM(CASE WHEN call_status='DROPPED' THEN 1 ELSE 0 END) AS dropped_calls
+FROM cdr
+GROUP BY cell_id
+ORDER BY dropped_calls DESC;
